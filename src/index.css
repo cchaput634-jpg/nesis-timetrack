@@ -1,0 +1,83 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* Variables de thème shadcn/ui (mode clair + sombre). */
+@layer base {
+  :root {
+    /* Palette de marque Nesis : teal #20999D + charcoal #2A2C2C. */
+    --background: 0 0% 100%;
+    --foreground: 190 8% 16%;
+    --card: 0 0% 100%;
+    --card-foreground: 190 8% 16%;
+    --popover: 0 0% 100%;
+    --popover-foreground: 190 8% 16%;
+    --primary: 182 66% 37%;
+    --primary-foreground: 0 0% 100%;
+    --secondary: 185 30% 94%;
+    --secondary-foreground: 190 12% 20%;
+    --muted: 190 20% 96%;
+    --muted-foreground: 200 8% 44%;
+    --accent: 184 45% 93%;
+    --accent-foreground: 184 60% 24%;
+    --destructive: 0 72% 51%;
+    --destructive-foreground: 0 0% 100%;
+    --border: 190 16% 89%;
+    --input: 190 16% 89%;
+    --ring: 182 66% 37%;
+    --radius: 0.75rem;
+  }
+
+  .dark {
+    /* Mode sombre bâti sur le charcoal de marque. */
+    --background: 190 10% 11%;
+    --foreground: 185 15% 92%;
+    --card: 192 9% 14%;
+    --card-foreground: 185 15% 92%;
+    --popover: 192 9% 14%;
+    --popover-foreground: 185 15% 92%;
+    --primary: 182 62% 44%;
+    --primary-foreground: 190 30% 8%;
+    --secondary: 192 8% 20%;
+    --secondary-foreground: 185 15% 92%;
+    --muted: 192 8% 20%;
+    --muted-foreground: 195 10% 62%;
+    --accent: 190 20% 22%;
+    --accent-foreground: 185 15% 92%;
+    --destructive: 0 62% 46%;
+    --destructive-foreground: 0 0% 100%;
+    --border: 192 8% 22%;
+    --input: 192 8% 22%;
+    --ring: 182 62% 44%;
+  }
+}
+
+@layer base {
+  * {
+    @apply border-border;
+  }
+  body {
+    @apply bg-background text-foreground antialiased;
+    font-feature-settings: "rlig" 1, "calt" 1;
+  }
+  /* Chiffres tabulaires pour un chrono qui ne "saute" pas. */
+  .tabular-nums {
+    font-variant-numeric: tabular-nums;
+  }
+
+  /* Placeholder de l'éditeur de notes quand la zone est vide. */
+  .prose-editor:empty::before {
+    content: attr(data-placeholder);
+    color: hsl(var(--muted-foreground));
+    pointer-events: none;
+  }
+  .prose-editor u,
+  .note-content u {
+    text-underline-offset: 2px;
+  }
+  /* Rendu d'une note en mode lecture. */
+  .note-content {
+    white-space: pre-wrap;
+    word-break: break-word;
+  }
+}

@@ -1,0 +1,30 @@
+{
+  // Configuration du Worker Cloudflare + base D1.
+  // Doc : https://developers.cloudflare.com/workers/wrangler/configuration/
+  "$schema": "node_modules/wrangler/config-schema.json",
+  "name": "nesis-timetrack",
+  "main": "worker/index.ts",
+  "compatibility_date": "2025-06-01",
+
+  // Sert le build Vite (SPA) en production ; le Worker s'exécute d'abord
+  // pour intercepter les routes /api, le reste tombe sur les assets statiques.
+  "assets": {
+    "directory": "./dist",
+    "binding": "ASSETS",
+    "run_worker_first": true,
+    "not_found_handling": "single-page-application"
+  },
+
+  // Base D1. Pour la PRODUCTION, créez-la puis collez l'id renvoyé :
+  //   wrangler d1 create nesis-db
+  // En LOCAL (wrangler dev), l'id ci-dessous est ignoré (base locale auto).
+  "d1_databases": [
+    {
+      "binding": "DB",
+      "database_name": "nesis-db",
+      "database_id": "REMPLACER_APRES_wrangler_d1_create"
+    }
+  ],
+
+  "observability": { "enabled": true }
+}

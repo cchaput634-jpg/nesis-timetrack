@@ -1,0 +1,23 @@
+# Dépendances / build
+node_modules
+dist
+dist-ssr
+*.local
+
+# Cloudflare Wrangler (état local, base D1 locale, secrets)
+.wrangler
+.dev.vars
+.dev.vars.*
+wrangler.jsonc.bak
+
+# Logs
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+*.log
+
+# Éditeurs / OS
+.DS_Store
+.vscode/*
+!.vscode/extensions.json
+.idea
