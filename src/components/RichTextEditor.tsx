@@ -56,14 +56,30 @@ export function RichTextEditor({
     });
   }, []);
 
+  // Garde les indicateurs (gras/souligné/rouge) synchronisés avec le format
+  // à la position du curseur — y compris au déplacement du caret sur mobile.
+  useEffect(() => {
+    const handler = () => {
+      const sel = document.getSelection();
+      if (sel && ref.current && ref.current.contains(sel.anchorNode)) {
+        refreshActive();
+      }
+    };
+    document.addEventListener("selectionchange", handler);
+    return () => document.removeEventListener("selectionchange", handler);
+  }, [refreshActive]);
+
   const emit = useCallback(() => {
     if (ref.current) onChange(ref.current.innerHTML);
   }, [onChange]);
 
   const toggle = useCallback(
     (command: "bold" | "underline") => {
-      document.execCommand(command);
+      // Focus d'abord : garantit que la commande cible bien l'éditeur.
+      // Sans sélection, execCommand active le format pour le texte À VENIR
+      // (on active le gras/souligné, puis on tape → le texte sort formaté).
       ref.current?.focus();
+      document.execCommand(command);
       refreshActive();
       emit();
     },
@@ -71,6 +87,7 @@ export function RichTextEditor({
   );
 
   const toggleRed = useCallback(() => {
+    ref.current?.focus();
     // styleWithCSS -> produit <span style="color:…"> plutôt que <font>.
     document.execCommand("styleWithCSS", false, "true");
     document.execCommand(
@@ -78,7 +95,6 @@ export function RichTextEditor({
       false,
       active.red ? defaultColor.current || "#000000" : RED
     );
-    ref.current?.focus();
     refreshActive();
     emit();
   }, [active.red, refreshActive, emit]);
@@ -138,16 +154,22 @@ function ToolbarButton({
   onClick: () => void;
   children: React.ReactNode;
 }) {
+  // onPointerDown couvre souris ET tactile et se déclenche AVANT que le focus
+  // ne quitte l'éditeur : preventDefault conserve donc la sélection/curseur
+  // (indispensable sur mobile, où toucher un bouton faisait perdre la
+  // sélection). On agit ici plutôt que sur onClick pour éviter tout blur.
+  const handle = (e: React.PointerEvent<HTMLButtonElement>) => {
+    e.preventDefault();
+    onClick();
+  };
   return (
     <button
       type="button"
       aria-label={label}
       aria-pressed={active}
-      // onMouseDown + preventDefault : conserve la sélection de texte au clic.
-      onMouseDown={(e) => e.preventDefault()}
-      onClick={onClick}
+      onPointerDown={handle}
       className={cn(
-        "flex h-8 w-8 items-center justify-center rounded-md transition-colors",
+        "flex h-9 w-9 items-center justify-center rounded-md transition-colors touch-manipulation select-none",
         active
           ? "bg-primary text-primary-foreground"
           : "text-muted-foreground hover:bg-accent hover:text-foreground"
