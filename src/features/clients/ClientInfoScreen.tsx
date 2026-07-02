@@ -13,12 +13,11 @@ export function ClientInfoScreen() {
     <div className="flex flex-col gap-4">
       <div className="flex items-center justify-between">
         <p className="text-sm text-muted-foreground">
-          {clients.length} fiche{clients.length > 1 ? "s" : ""} client
-          {clients.length > 1 ? "s" : ""}
+          {clients.length} interlocuteur{clients.length > 1 ? "s" : ""}
         </p>
         <Button onClick={addClient}>
           <Plus className="h-4 w-4" />
-          Nouveau client
+          Nouvel interlocuteur
         </Button>
       </div>
 
@@ -27,12 +26,12 @@ export function ClientInfoScreen() {
           <CardContent className="flex flex-col items-center gap-3 p-12 text-center">
             <UserRound className="h-8 w-8 text-muted-foreground opacity-40" />
             <p className="text-sm text-muted-foreground">
-              Aucune fiche client. Créez-en une pour renseigner ses
+              Aucun interlocuteur. Ajoutez-en un pour renseigner ses
               coordonnées et vos notes.
             </p>
             <Button onClick={addClient}>
               <Plus className="h-4 w-4" />
-              Nouveau client
+              Nouvel interlocuteur
             </Button>
           </CardContent>
         </Card>

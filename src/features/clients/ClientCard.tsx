@@ -50,7 +50,7 @@ export function ClientCard({ client, onUpdate, onDelete }: ClientCardProps) {
   };
 
   const title =
-    `${form.firstName} ${form.lastName}`.trim() || "Nouveau client";
+    `${form.firstName} ${form.lastName}`.trim() || "Nouvel interlocuteur";
 
   return (
     <Card className="p-4 sm:p-6">
@@ -64,7 +64,7 @@ export function ClientCard({ client, onUpdate, onDelete }: ClientCardProps) {
           size="icon"
           className="h-8 w-8 shrink-0 text-muted-foreground hover:text-destructive"
           onClick={() => onDelete(client.id)}
-          aria-label="Supprimer la fiche client"
+          aria-label="Supprimer l'interlocuteur"
         >
           <Trash2 className="h-4 w-4" />
         </Button>
