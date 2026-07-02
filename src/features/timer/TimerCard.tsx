@@ -42,10 +42,22 @@ export function TimerCard({ activities, onSave, onManage }: TimerCardProps) {
   };
 
   return (
-    <Card className="overflow-hidden">
+    <Card className="relative overflow-hidden">
+      {/* Réglages des activités — icône en coin haut-droite, indépendante
+          du flux vertical du contenu (n'occupe pas d'espace). */}
+      <button
+        type="button"
+        onClick={onManage}
+        aria-label="Personnaliser les activités"
+        title="Personnaliser les activités"
+        className="absolute right-3 top-3 z-10 flex h-8 w-8 items-center justify-center rounded-md text-muted-foreground transition-colors hover:bg-accent hover:text-foreground"
+      >
+        <Settings2 className="h-4 w-4" />
+      </button>
+
       <CardContent className="flex flex-col items-center gap-8 p-6 sm:p-10">
         {/* Sélecteur d'activités — grille responsive, désactivé pendant qu'un
-            chrono tourne. Le bouton « Gérer » ouvre la personnalisation. */}
+            chrono tourne. */}
         {activities.length === 0 ? (
           <div className="flex w-full max-w-md flex-col items-center gap-3 rounded-lg border border-dashed p-6 text-center text-sm text-muted-foreground">
             <p>Aucune activité pour l'instant.</p>
@@ -55,27 +67,17 @@ export function TimerCard({ activities, onSave, onManage }: TimerCardProps) {
             </Button>
           </div>
         ) : (
-          <div className="flex w-full max-w-2xl flex-col gap-3">
-            <div className="grid grid-cols-2 gap-2 sm:grid-cols-3">
-              {activities.map((a) => (
-                <ActivityButton
-                  key={a.id}
-                  active={activityId === a.id}
-                  disabled={status !== "idle"}
-                  color={a.color}
-                  label={a.label}
-                  onClick={() => setActivityId(a.id)}
-                />
-              ))}
-            </div>
-            <button
-              type="button"
-              onClick={onManage}
-              className="self-end text-xs font-medium text-muted-foreground hover:text-foreground inline-flex items-center gap-1.5"
-            >
-              <Settings2 className="h-3.5 w-3.5" />
-              Personnaliser
-            </button>
+          <div className="grid w-full max-w-2xl grid-cols-2 gap-2 sm:grid-cols-3">
+            {activities.map((a) => (
+              <ActivityButton
+                key={a.id}
+                active={activityId === a.id}
+                disabled={status !== "idle"}
+                color={a.color}
+                label={a.label}
+                onClick={() => setActivityId(a.id)}
+              />
+            ))}
           </div>
         )}
 
