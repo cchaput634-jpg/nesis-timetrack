@@ -89,14 +89,30 @@ class HybridAdapter implements StorageAdapter {
   /**
    * Lecture : tente D1 ; en cas d'échec (offline, backend arrêté),
    * retombe sur le cache local. Une lecture D1 réussie rafraîchit le cache.
+   *
+   * **Migration one-shot** : si la base D1 renvoie une liste vide alors que
+   * le cache local a des données (cas d'un utilisateur qui avait déjà
+   * saisi des choses en mode LocalStorage seul, avant le branchement D1),
+   * on pousse ces données locales vers D1 pour rattraper. Complètement
+   * silencieux, idempotent, s'applique par collection.
    */
   private async load<T>(collection: Collection): Promise<T[]> {
+    const local = readLocal<T>(collection);
     try {
       const remote = await apiGet<T>(collection);
+      if (remote.length === 0 && local.length > 0) {
+        // D1 vide + cache local avec des données → seed depuis le local.
+        try {
+          await apiPut(collection, local);
+        } catch (err) {
+          console.warn(`Migration D1 échouée (${collection})`, err);
+        }
+        return local;
+      }
       writeLocal(collection, remote);
       return remote;
     } catch {
-      return readLocal<T>(collection);
+      return local;
     }
   }
 

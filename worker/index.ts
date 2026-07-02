@@ -32,11 +32,24 @@ type Collection = (typeof COLLECTIONS)[number];
 
 const JSON_HEADERS = { "Content-Type": "application/json; charset=utf-8" };
 
+/** En-têtes CORS : permet au front hébergé ailleurs (Pages, dev local)
+ *  d'appeler l'API D1 de ce Worker. Simple *: pas d'auth par utilisateur. */
+const CORS_HEADERS = {
+  "Access-Control-Allow-Origin": "*",
+  "Access-Control-Allow-Methods": "GET,PUT,OPTIONS",
+  "Access-Control-Allow-Headers": "Content-Type",
+  "Access-Control-Max-Age": "86400",
+};
+
 export default {
   async fetch(request: Request, env: Env): Promise<Response> {
     const url = new URL(request.url);
 
     if (url.pathname.startsWith("/api/")) {
+      // Preflight CORS (déclenché par le PUT avec Content-Type JSON).
+      if (request.method === "OPTIONS") {
+        return new Response(null, { headers: CORS_HEADERS });
+      }
       try {
         return await handleApi(request, env, url);
       } catch (err) {
@@ -264,5 +277,8 @@ async function ensureSchema(env: Env): Promise<void> {
 }
 
 function json(data: unknown, status = 200): Response {
-  return new Response(JSON.stringify(data), { status, headers: JSON_HEADERS });
+  return new Response(JSON.stringify(data), {
+    status,
+    headers: { ...JSON_HEADERS, ...CORS_HEADERS },
+  });
 }
