@@ -1,3 +1,4 @@
+import { useState } from "react";
 import { Plus, UserRound } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 import { Card, CardContent } from "@/components/ui/card";
@@ -5,9 +6,13 @@ import { Button } from "@/components/ui/button";
 import { ClientCard } from "./ClientCard";
 import { useClients } from "@/hooks/useClients";
 
-/** Onglet « Info client » : fiches clients remplissables (pleine largeur). */
+/** Onglet « Info client » : fiches interlocuteurs (pleine largeur, lecture par défaut). */
 export function ClientInfoScreen() {
   const { clients, addClient, updateClient, deleteClient } = useClients();
+  // Id de la fiche fraîchement créée → ouverte directement en édition.
+  const [newlyCreatedId, setNewlyCreatedId] = useState<string | null>(null);
+
+  const handleCreate = () => setNewlyCreatedId(addClient().id);
 
   return (
     <div className="flex flex-col gap-4">
@@ -15,7 +20,7 @@ export function ClientInfoScreen() {
         <p className="text-sm text-muted-foreground">
           {clients.length} interlocuteur{clients.length > 1 ? "s" : ""}
         </p>
-        <Button onClick={addClient}>
+        <Button onClick={handleCreate}>
           <Plus className="h-4 w-4" />
           Nouvel interlocuteur
         </Button>
@@ -29,7 +34,7 @@ export function ClientInfoScreen() {
               Aucun interlocuteur. Ajoutez-en un pour renseigner ses
               coordonnées et vos notes.
             </p>
-            <Button onClick={addClient}>
+            <Button onClick={handleCreate}>
               <Plus className="h-4 w-4" />
               Nouvel interlocuteur
             </Button>
@@ -49,6 +54,7 @@ export function ClientInfoScreen() {
               >
                 <ClientCard
                   client={client}
+                  startEditing={client.id === newlyCreatedId}
                   onUpdate={updateClient}
                   onDelete={deleteClient}
                 />

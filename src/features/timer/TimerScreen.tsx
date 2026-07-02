@@ -1,10 +1,12 @@
 import { useMemo, useState } from "react";
 import { motion } from "framer-motion";
-import { Timer as TimerIcon } from "lucide-react";
+import { Timer as TimerIcon, Plus } from "lucide-react";
 import { Card, CardContent } from "@/components/ui/card";
+import { Button } from "@/components/ui/button";
 import { TimerCard } from "./TimerCard";
 import { WeeklyHistory } from "./WeeklyHistory";
 import { ManageActivitiesDialog } from "./ManageActivitiesDialog";
+import { ManualSessionDialog } from "./ManualSessionDialog";
 import { formatCompact } from "@/lib/time";
 import { useSessions } from "@/hooks/useSessions";
 import { useActivities } from "@/hooks/useActivities";
@@ -15,6 +17,7 @@ export function TimerScreen() {
   const { activities, byId, addActivity, updateActivity, deleteActivity } =
     useActivities();
   const [manageOpen, setManageOpen] = useState(false);
+  const [manualOpen, setManualOpen] = useState(false);
 
   const current = weeks[0];
 
@@ -103,7 +106,18 @@ export function TimerScreen() {
       </div>
 
       <div>
-        <h2 className="mb-3 text-lg font-semibold">Historique hebdomadaire</h2>
+        <div className="mb-3 flex items-center justify-between gap-3">
+          <h2 className="text-lg font-semibold">Historique hebdomadaire</h2>
+          <Button
+            size="sm"
+            variant="outline"
+            onClick={() => setManualOpen(true)}
+            disabled={activities.length === 0}
+          >
+            <Plus className="h-4 w-4" />
+            Ajouter une session
+          </Button>
+        </div>
         <WeeklyHistory
           weeks={weeks}
           activitiesById={byId}
@@ -119,6 +133,13 @@ export function TimerScreen() {
         onAdd={addActivity}
         onUpdate={updateActivity}
         onDelete={deleteActivity}
+      />
+
+      <ManualSessionDialog
+        open={manualOpen}
+        onOpenChange={setManualOpen}
+        activities={activities}
+        onSave={addSession}
       />
     </div>
   );
