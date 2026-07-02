@@ -29,3 +29,15 @@ CREATE TABLE IF NOT EXISTS notes (
   createdAt   INTEGER,
   updatedAt   INTEGER
 );
+
+CREATE TABLE IF NOT EXISTS clients (
+  id        TEXT PRIMARY KEY,
+  firstName TEXT,
+  lastName  TEXT,
+  role      TEXT,             -- poste / fonction
+  phone     TEXT,
+  email     TEXT,
+  notes     TEXT,
+  createdAt INTEGER,
+  updatedAt INTEGER
+);

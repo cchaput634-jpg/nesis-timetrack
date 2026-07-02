@@ -133,3 +133,21 @@ export interface Note {
   createdAt: number;
   updatedAt: number;
 }
+
+/* ------------------------------------------------------------------ */
+/* Info client                                                         */
+/* ------------------------------------------------------------------ */
+
+/** Fiche d'informations d'un client (indépendante du CRM entreprises). */
+export interface ClientInfo {
+  id: string;
+  firstName: string;
+  lastName: string;
+  /** Poste / fonction. */
+  role: string;
+  phone: string;
+  email: string;
+  notes: string;
+  createdAt: number;
+  updatedAt: number;
+}

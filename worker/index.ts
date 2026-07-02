@@ -21,7 +21,7 @@ export interface Env {
   ASSETS: Fetcher;
 }
 
-const COLLECTIONS = ["sessions", "companies", "notes"] as const;
+const COLLECTIONS = ["sessions", "companies", "notes", "clients"] as const;
 type Collection = (typeof COLLECTIONS)[number];
 
 const JSON_HEADERS = { "Content-Type": "application/json; charset=utf-8" };
@@ -147,6 +147,22 @@ function insertStatement(
         item.createdAt,
         item.updatedAt
       );
+
+    case "clients":
+      return env.DB.prepare(
+        `INSERT INTO clients (id, firstName, lastName, role, phone, email, notes, createdAt, updatedAt)
+         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`
+      ).bind(
+        item.id,
+        item.firstName,
+        item.lastName,
+        item.role,
+        item.phone,
+        item.email,
+        item.notes,
+        item.createdAt,
+        item.updatedAt
+      );
   }
 }
 
@@ -181,6 +197,19 @@ async function ensureSchema(env: Env): Promise<void> {
         category TEXT NOT NULL,
         title TEXT,
         contentHtml TEXT,
+        createdAt INTEGER,
+        updatedAt INTEGER
+      )`
+    ),
+    env.DB.prepare(
+      `CREATE TABLE IF NOT EXISTS clients (
+        id TEXT PRIMARY KEY,
+        firstName TEXT,
+        lastName TEXT,
+        role TEXT,
+        phone TEXT,
+        email TEXT,
+        notes TEXT,
         createdAt INTEGER,
         updatedAt INTEGER
       )`

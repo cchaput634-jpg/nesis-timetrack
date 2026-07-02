@@ -7,14 +7,16 @@ import {
   X,
   NotebookPen,
   NotebookText,
+  UserRound,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
 import { TimerScreen } from "@/features/timer/TimerScreen";
 import { CrmScreen } from "@/features/crm/CrmScreen";
 import { NotesScreen } from "@/features/notes/NotesScreen";
+import { ClientInfoScreen } from "@/features/clients/ClientInfoScreen";
 
-type View = "timer" | "crm" | "note-sav" | "note-demarchage";
+type View = "timer" | "crm" | "clients" | "note-sav" | "note-demarchage";
 
 const NAV: { id: View; label: string; icon: React.ReactNode }[] = [
   {
@@ -26,6 +28,11 @@ const NAV: { id: View; label: string; icon: React.ReactNode }[] = [
     id: "crm",
     label: "Suivi Démarchage",
     icon: <Contact2 className="h-5 w-5" />,
+  },
+  {
+    id: "clients",
+    label: "Info client",
+    icon: <UserRound className="h-5 w-5" />,
   },
   {
     id: "note-sav",
@@ -46,6 +53,8 @@ function renderView(view: View) {
       return <TimerScreen />;
     case "crm":
       return <CrmScreen />;
+    case "clients":
+      return <ClientInfoScreen />;
     case "note-sav":
       return <NotesScreen category="sav" />;
     case "note-demarchage":
