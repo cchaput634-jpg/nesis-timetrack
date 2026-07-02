@@ -7,7 +7,10 @@ import {
   ChevronUp,
   ChevronDown,
   FolderInput,
+  GripVertical,
 } from "lucide-react";
+import { useSortable } from "@dnd-kit/sortable";
+import { CSS } from "@dnd-kit/utilities";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -51,6 +54,24 @@ export function NoteCard({
   const [editing, setEditing] = useState(startEditing);
   const [title, setTitle] = useState(note.title);
   const [groupName, setGroupName] = useState(note.groupName ?? "");
+
+  // Intégration @dnd-kit : la carte devient un item déplaçable dans son
+  // SortableContext. Le drag est déclenché SEULEMENT depuis la poignée
+  // (les `listeners` sont attachés au grip), pour ne pas gêner le scroll
+  // ni les clics normaux dans le reste de la carte.
+  const {
+    attributes,
+    listeners,
+    setNodeRef,
+    transform,
+    transition,
+    isDragging,
+  } = useSortable({ id: note.id });
+  const dragStyle: React.CSSProperties = {
+    transform: CSS.Transform.toString(transform),
+    transition,
+    opacity: isDragging ? 0.4 : 1,
+  };
   // Dernier contenu HTML connu (mis à jour à chaque frappe, non débouncé).
   const contentRef = useRef(note.contentHtml);
   const timer = useRef<number | null>(null);
@@ -83,9 +104,21 @@ export function NoteCard({
   const datalistId = `groups-${note.id}`;
 
   return (
-    <Card className="p-4 sm:p-6">
-      {/* En-tête : titre + actions */}
+    <Card ref={setNodeRef} style={dragStyle} className="p-4 sm:p-6">
+      {/* En-tête : poignée de glissement + titre + actions */}
       <div className="mb-3 flex items-start gap-2">
+        {/* Poignée : SEUL point de départ du drag. `touch-action: none`
+            (via touch-none) empêche le scroll de battre le drag sur mobile. */}
+        <button
+          type="button"
+          aria-label="Glisser pour réordonner"
+          {...attributes}
+          {...listeners}
+          className="-ml-1 flex h-9 w-6 shrink-0 cursor-grab items-center justify-center touch-none text-muted-foreground hover:text-foreground active:cursor-grabbing"
+        >
+          <GripVertical className="h-5 w-5" />
+        </button>
+
         {editing ? (
           <Input
             value={title}

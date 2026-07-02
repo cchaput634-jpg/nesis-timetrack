@@ -133,6 +133,67 @@ export function useNotes(category: NoteCategory) {
     [all, notes, persist]
   );
 
+  /**
+   * Insère la note `sourceId` à la position `destIndex` (index dans le groupe
+   * cible **excluant** la source) du groupe `destGroup`. Renumérote ensuite
+   * les `sortOrder` de toute la catégorie pour préserver un ordre stable.
+   * Utilisé par le drag-and-drop pour les déplacements inter-groupes.
+   */
+  const reorderNotes = useCallback(
+    (sourceId: string, destGroup: string, destIndex: number) => {
+      // Aplati ordonné (par groupe) de la catégorie, en retirant la source.
+      const withoutSource: { groupName: string; note: NormalizedNote }[] = [];
+      let source: NormalizedNote | null = null;
+      for (const g of groups) {
+        for (const n of g.notes) {
+          if (n.id === sourceId) source = n;
+          else withoutSource.push({ groupName: g.name, note: n });
+        }
+      }
+      if (!source) return;
+
+      // Cherche l'index absolu où insérer : avant la `destIndex`-ième
+      // note du groupe cible, ou à la fin si le groupe n'existe pas encore.
+      let insertAt = withoutSource.length;
+      let seenInDest = 0;
+      for (let i = 0; i < withoutSource.length; i++) {
+        if (withoutSource[i].groupName === destGroup) {
+          if (seenInDest === destIndex) {
+            insertAt = i;
+            break;
+          }
+          seenInDest++;
+        }
+      }
+      withoutSource.splice(insertAt, 0, {
+        groupName: destGroup,
+        note: { ...source, groupName: destGroup },
+      });
+
+      // Nouvelle sortOrder = position absolue dans l'aplati.
+      const patches = new Map<string, { sortOrder: number; groupName: string }>();
+      withoutSource.forEach((item, i) => {
+        patches.set(item.note.id, {
+          sortOrder: i,
+          groupName: item.groupName,
+        });
+      });
+
+      const now = Date.now();
+      persist(
+        all.map((n) => {
+          const patch = patches.get(n.id);
+          if (!patch) return n;
+          // updatedAt uniquement pour la source (celle qui change réellement).
+          return n.id === sourceId
+            ? { ...n, ...patch, updatedAt: now }
+            : { ...n, ...patch };
+        })
+      );
+    },
+    [all, groups, persist]
+  );
+
   return {
     notes,
     groups,
@@ -142,5 +203,6 @@ export function useNotes(category: NoteCategory) {
     updateNote,
     deleteNote,
     moveNote,
+    reorderNotes,
   };
 }
