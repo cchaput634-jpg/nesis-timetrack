@@ -130,6 +130,12 @@ export interface Note {
   title: string;
   /** Contenu HTML restreint (gras, souligné, sauts de ligne). */
   contentHtml: string;
+  /** Nom de groupe libre (vide = « Sans groupe »). Optionnel pour les
+   *  anciennes notes créées avant l'ajout de cette fonctionnalité. */
+  groupName?: string;
+  /** Position manuelle dans le groupe (croissant). Optionnel : fallback
+   *  sur `-updatedAt` pour les notes antérieures. */
+  sortOrder?: number;
   createdAt: number;
   updatedAt: number;
 }

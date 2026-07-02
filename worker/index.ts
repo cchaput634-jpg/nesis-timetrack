@@ -137,13 +137,15 @@ function insertStatement(
 
     case "notes":
       return env.DB.prepare(
-        `INSERT INTO notes (id, category, title, contentHtml, createdAt, updatedAt)
-         VALUES (?, ?, ?, ?, ?, ?)`
+        `INSERT INTO notes (id, category, title, contentHtml, groupName, sortOrder, createdAt, updatedAt)
+         VALUES (?, ?, ?, ?, ?, ?, ?, ?)`
       ).bind(
         item.id,
         item.category,
         item.title,
         item.contentHtml,
+        (item.groupName as string | undefined) ?? "",
+        (item.sortOrder as number | undefined) ?? 0,
         item.createdAt,
         item.updatedAt
       );
@@ -197,6 +199,8 @@ async function ensureSchema(env: Env): Promise<void> {
         category TEXT NOT NULL,
         title TEXT,
         contentHtml TEXT,
+        groupName TEXT DEFAULT '',
+        sortOrder INTEGER DEFAULT 0,
         createdAt INTEGER,
         updatedAt INTEGER
       )`
@@ -215,6 +219,21 @@ async function ensureSchema(env: Env): Promise<void> {
       )`
     ),
   ]);
+
+  // Migration idempotente : ajoute les colonnes aux bases existantes.
+  // SQLite n'a pas d'`ADD COLUMN IF NOT EXISTS` -> on tente et on ignore
+  // l'erreur si la colonne existe déjà.
+  const alters = [
+    `ALTER TABLE notes ADD COLUMN groupName TEXT DEFAULT ''`,
+    `ALTER TABLE notes ADD COLUMN sortOrder INTEGER DEFAULT 0`,
+  ];
+  for (const sql of alters) {
+    try {
+      await env.DB.prepare(sql).run();
+    } catch {
+      // Colonne déjà présente : ignoré.
+    }
+  }
 }
 
 function json(data: unknown, status = 200): Response {

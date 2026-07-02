@@ -26,6 +26,8 @@ CREATE TABLE IF NOT EXISTS notes (
   category    TEXT NOT NULL,   -- 'sav' | 'demarchage'
   title       TEXT,
   contentHtml TEXT,
+  groupName   TEXT DEFAULT '', -- nom de groupe libre (vide = « Sans groupe »)
+  sortOrder   INTEGER DEFAULT 0, -- position manuelle dans le groupe
   createdAt   INTEGER,
   updatedAt   INTEGER
 );
