@@ -1,11 +1,11 @@
-import { useEffect, useState } from "react";
+import { useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { Play, Pause, Square, Settings2, Plus } from "lucide-react";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 import { formatDuration } from "@/lib/time";
-import { useTimer } from "@/hooks/useTimer";
+import { useTimerContext } from "@/context/TimerContext";
 import type { Activity } from "@/types";
 
 interface TimerCardProps {
@@ -17,20 +17,34 @@ interface TimerCardProps {
   onManage: () => void;
 }
 
-/** Module de commande du chronomètre : sélection d'activité + chrono + actions. */
+/** Module de commande du chronomètre : sélection d'activité + chrono + actions.
+ *
+ *  Le state (activité sélectionnée + chrono) vit dans `TimerContext` afin de
+ *  survivre au démontage de la card quand on change d'onglet.
+ */
 export function TimerCard({ activities, onSave, onManage }: TimerCardProps) {
-  const [activityId, setActivityId] = useState<string>("");
-  const { status, elapsedSec, start, pause, reset } = useTimer();
+  const {
+    activityId,
+    setActivityId,
+    status,
+    elapsedSec,
+    start,
+    pause,
+    reset,
+  } = useTimerContext();
   const running = status === "running";
 
   // Sélectionne automatiquement la première activité disponible dès qu'elle
-  // est chargée, et se réinitialise si l'activité active est supprimée.
+  // est chargée, et se réinitialise si l'activité active est supprimée —
+  // mais ne PERTURBE PAS un chrono en cours (on n'écrase pas l'activité
+  // liée à la session active tant qu'elle existe encore).
   useEffect(() => {
     if (activities.length === 0) return;
+    if (status !== "idle") return;
     if (!activities.some((a) => a.id === activityId)) {
       setActivityId(activities[0].id);
     }
-  }, [activities, activityId]);
+  }, [activities, activityId, status, setActivityId]);
 
   const current = activities.find((a) => a.id === activityId) ?? null;
 
