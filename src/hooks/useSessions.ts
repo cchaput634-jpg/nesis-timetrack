@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { db } from "@/services/storage";
 import { groupSessionsByWeek, uid } from "@/lib/time";
-import type { ActivityType, Session } from "@/types";
+import type { Session } from "@/types";
 
 /**
  * Gère l'historique des sessions chronométrées.
@@ -26,7 +26,7 @@ export function useSessions() {
   }, []);
 
   const addSession = useCallback(
-    (activity: ActivityType, startedAt: number, durationSec: number) => {
+    (activity: string, startedAt: number, durationSec: number) => {
       const session: Session = { id: uid(), activity, startedAt, durationSec };
       persist([session, ...sessions]);
     },

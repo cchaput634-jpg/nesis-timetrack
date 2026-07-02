@@ -1,4 +1,4 @@
-import type { ClientInfo, Company, Note, Session } from "@/types";
+import type { Activity, ClientInfo, Company, Note, Session } from "@/types";
 
 /**
  * Couche d'abstraction de persistance.
@@ -20,16 +20,24 @@ export interface StorageAdapter {
   saveNotes(notes: Note[]): Promise<void>;
   getClients(): Promise<ClientInfo[]>;
   saveClients(clients: ClientInfo[]): Promise<void>;
+  getActivities(): Promise<Activity[]>;
+  saveActivities(activities: Activity[]): Promise<void>;
 }
 
 /** Collections persistées ; sert de clés d'API et de LocalStorage. */
-type Collection = "sessions" | "companies" | "notes" | "clients";
+type Collection =
+  | "sessions"
+  | "companies"
+  | "notes"
+  | "clients"
+  | "activities";
 
 const KEYS: Record<Collection, string> = {
   sessions: "tct.sessions.v1",
   companies: "tct.companies.v1",
   notes: "tct.notes.v1",
   clients: "tct.clients.v1",
+  activities: "tct.activities.v1",
 };
 
 /* ------------------------------------------------------------------ */
@@ -130,6 +138,12 @@ class HybridAdapter implements StorageAdapter {
   }
   saveClients(clients: ClientInfo[]) {
     return this.store("clients", clients);
+  }
+  getActivities() {
+    return this.load<Activity>("activities");
+  }
+  saveActivities(activities: Activity[]) {
+    return this.store("activities", activities);
   }
 }
 

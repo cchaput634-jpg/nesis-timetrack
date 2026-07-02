@@ -1,12 +1,6 @@
 import { useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import {
-  ChevronDown,
-  Trash2,
-  Clock,
-  Headphones,
-  Megaphone,
-} from "lucide-react";
+import { ChevronDown, Trash2, Clock } from "lucide-react";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import {
@@ -19,15 +13,25 @@ import {
 } from "@/components/ui/table";
 import { cn } from "@/lib/utils";
 import { formatCompact, formatDuration, formatSessionDate } from "@/lib/time";
-import { ACTIVITY_META, type Session, type WeekGroup } from "@/types";
+import type { Activity, Session, WeekGroup } from "@/types";
+
+/** Représentation d'affichage pour une activité inconnue (ex. supprimée). */
+const UNKNOWN_META = { label: "(activité supprimée)", color: "hsl(0 0% 60%)" };
 
 interface WeeklyHistoryProps {
   weeks: WeekGroup[];
+  /** Map id -> Activity pour retrouver libellés et couleurs à l'affichage. */
+  activitiesById: Map<string, Activity>;
   onDelete: (id: string) => void;
 }
 
-/** Historique des sessions, obligatoirement regroupé par semaine. */
-export function WeeklyHistory({ weeks, onDelete }: WeeklyHistoryProps) {
+/** Historique des sessions, regroupé par semaine ISO. Affichage dynamique
+ *  selon les activités présentes dans les sessions de la semaine. */
+export function WeeklyHistory({
+  weeks,
+  activitiesById,
+  onDelete,
+}: WeeklyHistoryProps) {
   if (weeks.length === 0) {
     return (
       <Card>
@@ -44,21 +48,46 @@ export function WeeklyHistory({ weeks, onDelete }: WeeklyHistoryProps) {
   return (
     <div className="flex flex-col gap-4">
       {weeks.map((week) => (
-        <WeekAccordion key={week.weekKey} week={week} onDelete={onDelete} />
+        <WeekAccordion
+          key={week.weekKey}
+          week={week}
+          activitiesById={activitiesById}
+          onDelete={onDelete}
+        />
       ))}
     </div>
   );
 }
 
+/** Lookup libellé + couleur d'une activité par id (fallback : « supprimée »). */
+function metaFor(activitiesById: Map<string, Activity>, id: string) {
+  return activitiesById.get(id) ?? UNKNOWN_META;
+}
+
 function WeekAccordion({
   week,
+  activitiesById,
   onDelete,
 }: {
   week: WeekGroup;
+  activitiesById: Map<string, Activity>;
   onDelete: (id: string) => void;
 }) {
   const [open, setOpen] = useState(true);
-  const savPct = week.totalSec ? (week.savSec / week.totalSec) * 100 : 0;
+
+  // Entrées de la semaine ordonnées par temps décroissant, prêtes à afficher.
+  const entries = Object.entries(week.perActivitySec)
+    .map(([id, sec]) => {
+      const meta = metaFor(activitiesById, id);
+      return {
+        id,
+        label: meta.label,
+        color: meta.color,
+        sec,
+        pct: week.totalSec ? (sec / week.totalSec) * 100 : 0,
+      };
+    })
+    .sort((a, b) => b.sec - a.sec);
 
   return (
     <Card>
@@ -98,34 +127,27 @@ function WeekAccordion({
         </div>
       </button>
 
-      {/* Répartition SAV vs Démarchage. */}
+      {/* Répartition dynamique par activité (barre proportionnelle). */}
       <div className="px-4 pb-4 sm:px-5">
         <div className="flex overflow-hidden rounded-full">
-          <div
-            className="h-2"
-            style={{
-              width: `${savPct}%`,
-              backgroundColor: ACTIVITY_META.sav.color,
-            }}
-          />
-          <div
-            className="h-2 flex-1"
-            style={{ backgroundColor: ACTIVITY_META.demarchage.color }}
-          />
+          {entries.map((e) => (
+            <div
+              key={e.id}
+              className="h-2"
+              style={{ width: `${e.pct}%`, backgroundColor: e.color }}
+              title={`${e.label} · ${formatCompact(e.sec)}`}
+            />
+          ))}
         </div>
         <div className="mt-2 flex flex-wrap gap-x-6 gap-y-1 text-sm">
-          <SplitLabel
-            icon={<Headphones className="h-3.5 w-3.5" />}
-            color={ACTIVITY_META.sav.color}
-            label="SAV"
-            value={formatCompact(week.savSec)}
-          />
-          <SplitLabel
-            icon={<Megaphone className="h-3.5 w-3.5" />}
-            color={ACTIVITY_META.demarchage.color}
-            label="Démarchage"
-            value={formatCompact(week.demarchageSec)}
-          />
+          {entries.map((e) => (
+            <SplitLabel
+              key={e.id}
+              color={e.color}
+              label={e.label}
+              value={formatCompact(e.sec)}
+            />
+          ))}
         </div>
       </div>
 
@@ -150,7 +172,12 @@ function WeekAccordion({
                 </TableHeader>
                 <TableBody>
                   {week.sessions.map((s) => (
-                    <SessionRow key={s.id} session={s} onDelete={onDelete} />
+                    <SessionRow
+                      key={s.id}
+                      session={s}
+                      activitiesById={activitiesById}
+                      onDelete={onDelete}
+                    />
                   ))}
                 </TableBody>
               </Table>
@@ -164,12 +191,14 @@ function WeekAccordion({
 
 function SessionRow({
   session,
+  activitiesById,
   onDelete,
 }: {
   session: Session;
+  activitiesById: Map<string, Activity>;
   onDelete: (id: string) => void;
 }) {
-  const meta = ACTIVITY_META[session.activity];
+  const meta = metaFor(activitiesById, session.activity);
   return (
     <TableRow>
       <TableCell>
@@ -203,19 +232,20 @@ function SessionRow({
 }
 
 function SplitLabel({
-  icon,
   color,
   label,
   value,
 }: {
-  icon: React.ReactNode;
   color: string;
   label: string;
   value: string;
 }) {
   return (
     <span className="inline-flex items-center gap-1.5 text-muted-foreground">
-      <span style={{ color }}>{icon}</span>
+      <span
+        className="inline-block h-2 w-2 shrink-0 rounded-full"
+        style={{ backgroundColor: color }}
+      />
       <span className="font-medium text-foreground">{value}</span>
       <span className="text-xs">{label}</span>
     </span>

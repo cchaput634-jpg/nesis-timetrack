@@ -43,3 +43,11 @@ CREATE TABLE IF NOT EXISTS clients (
   createdAt INTEGER,
   updatedAt INTEGER
 );
+
+CREATE TABLE IF NOT EXISTS activities (
+  id        TEXT PRIMARY KEY,
+  label     TEXT NOT NULL,
+  color     TEXT NOT NULL,
+  createdAt INTEGER,
+  updatedAt INTEGER
+);

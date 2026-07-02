@@ -91,16 +91,15 @@ export function groupSessionsByWeek(sessions: Session[]): WeekGroup[] {
         label: `Semaine ${week} · ${year}`,
         rangeLabel: formatRange(getMonday(date)),
         totalSec: 0,
-        savSec: 0,
-        demarchageSec: 0,
+        perActivitySec: {},
         sessions: [],
       };
       map.set(weekKey, group);
     }
 
     group.totalSec += session.durationSec;
-    if (session.activity === "sav") group.savSec += session.durationSec;
-    else group.demarchageSec += session.durationSec;
+    group.perActivitySec[session.activity] =
+      (group.perActivitySec[session.activity] ?? 0) + session.durationSec;
     group.sessions.push(session);
   }
 

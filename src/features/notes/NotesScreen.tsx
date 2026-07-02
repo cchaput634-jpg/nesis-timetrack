@@ -21,7 +21,7 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { NoteCard } from "./NoteCard";
 import { useNotes, type NoteGroup } from "@/hooks/useNotes";
-import { ACTIVITY_META, type NoteCategory } from "@/types";
+import { NOTE_CATEGORY_META, type NoteCategory } from "@/types";
 
 interface NotesScreenProps {
   category: NoteCategory;
@@ -47,7 +47,7 @@ export function NotesScreen({ category }: NotesScreenProps) {
     moveNote,
     reorderNotes,
   } = useNotes(category);
-  const label = ACTIVITY_META[category].label;
+  const label = NOTE_CATEGORY_META[category].label;
   // Id de la note tout juste créée → ouverte directement en édition.
   const [newlyCreatedId, setNewlyCreatedId] = useState<string | null>(null);
   const [activeDragId, setActiveDragId] = useState<string | null>(null);

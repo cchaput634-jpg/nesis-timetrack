@@ -21,7 +21,13 @@ export interface Env {
   ASSETS: Fetcher;
 }
 
-const COLLECTIONS = ["sessions", "companies", "notes", "clients"] as const;
+const COLLECTIONS = [
+  "sessions",
+  "companies",
+  "notes",
+  "clients",
+  "activities",
+] as const;
 type Collection = (typeof COLLECTIONS)[number];
 
 const JSON_HEADERS = { "Content-Type": "application/json; charset=utf-8" };
@@ -165,6 +171,18 @@ function insertStatement(
         item.createdAt,
         item.updatedAt
       );
+
+    case "activities":
+      return env.DB.prepare(
+        `INSERT INTO activities (id, label, color, createdAt, updatedAt)
+         VALUES (?, ?, ?, ?, ?)`
+      ).bind(
+        item.id,
+        item.label,
+        item.color,
+        item.createdAt,
+        item.updatedAt
+      );
   }
 }
 
@@ -214,6 +232,15 @@ async function ensureSchema(env: Env): Promise<void> {
         phone TEXT,
         email TEXT,
         notes TEXT,
+        createdAt INTEGER,
+        updatedAt INTEGER
+      )`
+    ),
+    env.DB.prepare(
+      `CREATE TABLE IF NOT EXISTS activities (
+        id TEXT PRIMARY KEY,
+        label TEXT NOT NULL,
+        color TEXT NOT NULL,
         createdAt INTEGER,
         updatedAt INTEGER
       )`

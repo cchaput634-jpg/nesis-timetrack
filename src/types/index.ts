@@ -7,18 +7,41 @@
 /* Suivi de temps                                                      */
 /* ------------------------------------------------------------------ */
 
-/** Type d'activité chronométrée. */
-export type ActivityType = "sav" | "demarchage";
+/** Une activité chronométrée personnalisable (SAV, Démarchage, ou toute
+ *  autre mission ajoutée par l'utilisateur). */
+export interface Activity {
+  id: string;
+  label: string;
+  /** Couleur (CSS) associée à l'activité dans les graphes et badges. */
+  color: string;
+  createdAt: number;
+  updatedAt: number;
+}
 
-/** Une session de travail chronométrée puis enregistrée. */
+/** Une session de travail chronométrée puis enregistrée.
+ *  `activity` référence l'`Activity.id` — laissé en `string` pour rester
+ *  robuste si l'activité est renommée ou supprimée par la suite. */
 export interface Session {
   id: string;
-  activity: ActivityType;
+  activity: string;
   /** Horodatage de démarrage (epoch ms) — sert au regroupement hebdomadaire. */
   startedAt: number;
   /** Durée totale de la session en secondes. */
   durationSec: number;
 }
+
+/** Palette de couleurs proposée à l'utilisateur lors de la création/édition
+ *  d'une activité (teal de marque en premier, puis complémentaires). */
+export const ACTIVITY_COLOR_PALETTE = [
+  "hsl(182 66% 37%)", // teal (marque)
+  "hsl(195 22% 30%)", // charcoal
+  "hsl(221 83% 53%)", // bleu
+  "hsl(160 84% 39%)", // vert
+  "hsl(45 93% 47%)",  // ambre
+  "hsl(24 90% 50%)",  // orange
+  "hsl(346 84% 55%)", // rose
+  "hsl(280 65% 55%)", // violet
+] as const;
 
 /**
  * Sessions agrégées par semaine ISO.
@@ -34,8 +57,9 @@ export interface WeekGroup {
   /** Bornes de la semaine (pour affichage). */
   rangeLabel: string;
   totalSec: number;
-  savSec: number;
-  demarchageSec: number;
+  /** Total de secondes par id d'activité (dynamique, dépend des activités
+   *  utilisées cette semaine). */
+  perActivitySec: Record<string, number>;
   sessions: Session[];
 }
 
@@ -103,22 +127,22 @@ export const LEAD_STATUS_META: Record<
   },
 };
 
-/** Métadonnées d'affichage des activités chronométrées. */
-export const ACTIVITY_META: Record<
-  ActivityType,
-  { label: string; color: string }
-> = {
-  // Démarchage : teal de marque ; SAV : charcoal de marque (contraste lisible).
-  sav: { label: "SAV", color: "hsl(195 22% 30%)" },
-  demarchage: { label: "Démarchage", color: "hsl(182 66% 37%)" },
-};
-
 /* ------------------------------------------------------------------ */
 /* Notes (SAV / Démarchage)                                            */
 /* ------------------------------------------------------------------ */
 
-/** Catégorie d'une note : réutilise les deux mêmes domaines que le chrono. */
-export type NoteCategory = ActivityType;
+/** Catégorie d'une note — reste fixée à SAV/Démarchage, indépendante
+ *  des activités personnalisables du chrono. */
+export type NoteCategory = "sav" | "demarchage";
+
+/** Libellés/couleurs des deux catégories de notes. */
+export const NOTE_CATEGORY_META: Record<
+  NoteCategory,
+  { label: string; color: string }
+> = {
+  sav: { label: "SAV", color: "hsl(195 22% 30%)" },
+  demarchage: { label: "Démarchage", color: "hsl(182 66% 37%)" },
+};
 
 /**
  * Une note libre : un titre + un contenu riche (HTML simple, gras/souligné).
