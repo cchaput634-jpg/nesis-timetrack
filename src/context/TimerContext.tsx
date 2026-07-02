@@ -1,5 +1,14 @@
-import { createContext, useContext, useState, type ReactNode } from "react";
+import {
+  createContext,
+  useCallback,
+  useContext,
+  useState,
+  type ReactNode,
+} from "react";
 import { useTimer, type TimerStatus } from "@/hooks/useTimer";
+
+/** Clé LocalStorage pour l'activité sélectionnée dans le sélecteur. */
+const ACTIVITY_STORAGE_KEY = "tct.timer.activityId.v1";
 
 /**
  * Contexte global du chronomètre.
@@ -24,7 +33,26 @@ interface TimerContextValue {
 const TimerContext = createContext<TimerContextValue | null>(null);
 
 export function TimerProvider({ children }: { children: ReactNode }) {
-  const [activityId, setActivityId] = useState<string>("");
+  // Restauration synchrone depuis LocalStorage (comme le chrono lui-même)
+  // pour éviter tout flash de « pas d'activité » au premier rendu.
+  const [activityId, setActivityIdState] = useState<string>(() => {
+    try {
+      return localStorage.getItem(ACTIVITY_STORAGE_KEY) ?? "";
+    } catch {
+      return "";
+    }
+  });
+
+  const setActivityId = useCallback((id: string) => {
+    setActivityIdState(id);
+    try {
+      if (id) localStorage.setItem(ACTIVITY_STORAGE_KEY, id);
+      else localStorage.removeItem(ACTIVITY_STORAGE_KEY);
+    } catch {
+      /* quota / mode privé : on ignore */
+    }
+  }, []);
+
   const timer = useTimer();
   return (
     <TimerContext.Provider
