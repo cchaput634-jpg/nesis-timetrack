@@ -80,7 +80,6 @@ export function CompanyFormDialog({
               onChange={(e) =>
                 setValues((v) => ({ ...v, name: e.target.value }))
               }
-              placeholder="Ex. Atelier Novaris"
             />
           </div>
 
@@ -92,7 +91,6 @@ export function CompanyFormDialog({
               onChange={(e) =>
                 setValues((v) => ({ ...v, sector: e.target.value }))
               }
-              placeholder="Ex. Restauration, BTP, e-commerce…"
             />
           </div>
 
@@ -125,7 +123,6 @@ export function CompanyFormDialog({
               onChange={(e) =>
                 setValues((v) => ({ ...v, notes: e.target.value }))
               }
-              placeholder="Contexte, besoins identifiés, historique global…"
             />
           </div>
 

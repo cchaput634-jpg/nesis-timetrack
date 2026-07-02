@@ -213,21 +213,18 @@ function EditView({
           label="Prénom"
           value={form.firstName}
           onChange={(v) => onSet("firstName", v)}
-          placeholder="Camille"
         />
         <Field
           id={`last-${clientId}`}
           label="Nom"
           value={form.lastName}
           onChange={(v) => onSet("lastName", v)}
-          placeholder="Deveraux"
         />
         <Field
           id={`role-${clientId}`}
           label="Poste"
           value={form.role}
           onChange={(v) => onSet("role", v)}
-          placeholder="Responsable achats"
         />
         <Field
           id={`phone-${clientId}`}
@@ -235,7 +232,6 @@ function EditView({
           type="tel"
           value={form.phone}
           onChange={(v) => onSet("phone", v)}
-          placeholder="06 12 34 56 78"
         />
         <Field
           id={`email-${clientId}`}
@@ -243,7 +239,6 @@ function EditView({
           type="email"
           value={form.email}
           onChange={(v) => onSet("email", v)}
-          placeholder="camille@exemple.fr"
           className="sm:col-span-2"
         />
       </div>
@@ -254,7 +249,6 @@ function EditView({
           id={`notes-${clientId}`}
           value={form.notes}
           onChange={(e) => onSet("notes", e.target.value)}
-          placeholder="Contexte, échanges, préférences…"
           className="min-h-[100px]"
         />
       </div>

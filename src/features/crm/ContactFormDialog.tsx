@@ -73,7 +73,6 @@ export function ContactFormDialog({
                 value={values.firstName}
                 autoFocus
                 onChange={(e) => set("firstName", e.target.value)}
-                placeholder="Camille"
               />
             </div>
             <div className="grid gap-2">
@@ -82,7 +81,6 @@ export function ContactFormDialog({
                 id="contact-last"
                 value={values.lastName}
                 onChange={(e) => set("lastName", e.target.value)}
-                placeholder="Deveraux"
               />
             </div>
           </div>
@@ -95,7 +93,6 @@ export function ContactFormDialog({
                 type="tel"
                 value={values.phone}
                 onChange={(e) => set("phone", e.target.value)}
-                placeholder="06 12 34 56 78"
               />
             </div>
             <div className="grid gap-2">
@@ -105,7 +102,6 @@ export function ContactFormDialog({
                 type="email"
                 value={values.email}
                 onChange={(e) => set("email", e.target.value)}
-                placeholder="camille@exemple.fr"
               />
             </div>
           </div>
@@ -128,7 +124,6 @@ export function ContactFormDialog({
               id="contact-notes"
               value={values.notes}
               onChange={(e) => set("notes", e.target.value)}
-              placeholder="Compte-rendu d'appel, prochaine étape, préférences…"
             />
           </div>
 

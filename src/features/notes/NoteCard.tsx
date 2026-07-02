@@ -206,7 +206,7 @@ export function NoteCard({
               setGroupName(e.target.value);
               debouncedUpdate({ groupName: e.target.value });
             }}
-            placeholder="Ex. Clients récurrents, Urgences… (vide = Sans groupe)"
+            placeholder="Vide = Sans groupe"
           />
           <datalist id={datalistId}>
             {groupNames.map((g) => (
