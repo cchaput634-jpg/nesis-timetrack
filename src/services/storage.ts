@@ -85,29 +85,59 @@ async function apiPut<T>(collection: Collection, data: T[]): Promise<void> {
 /* Adaptateur hybride : D1 en source de vérité + cache local           */
 /* ------------------------------------------------------------------ */
 
+/** Marqueur LocalStorage : ce navigateur a-t-il déjà réussi à synchroniser
+ *  cette collection avec D1 au moins une fois ? Empêche toute migration
+ *  répétée (qui « ressusciterait » les éléments supprimés depuis un autre
+ *  appareil). Une valeur par collection car chacune peut arriver
+ *  indépendamment à un premier sync réussi. */
+const SYNC_FLAG_PREFIX = "tct.synced.v1.";
+
 class HybridAdapter implements StorageAdapter {
   /**
    * Lecture : tente D1 ; en cas d'échec (offline, backend arrêté),
    * retombe sur le cache local. Une lecture D1 réussie rafraîchit le cache.
    *
-   * **Migration one-shot** : si la base D1 renvoie une liste vide alors que
-   * le cache local a des données (cas d'un utilisateur qui avait déjà
-   * saisi des choses en mode LocalStorage seul, avant le branchement D1),
-   * on pousse ces données locales vers D1 pour rattraper. Complètement
-   * silencieux, idempotent, s'applique par collection.
+   * **Migration one-shot par appareil** : uniquement au tout premier sync
+   * réussi de ce navigateur, si la base D1 est vide et que le cache local
+   * a des données, on pousse ces données locales vers D1 (rattrapage de
+   * l'ancien mode LocalStorage seul).
+   *
+   * Une fois le flag `tct.synced.v1.<collection>` posé, ce navigateur
+   * considère D1 comme la source de vérité et ne re-uploade JAMAIS son
+   * cache local — sinon supprimer un élément depuis un autre appareil
+   * serait annulé au prochain chargement.
    */
   private async load<T>(collection: Collection): Promise<T[]> {
     const local = readLocal<T>(collection);
+    const flagKey = `${SYNC_FLAG_PREFIX}${collection}`;
+    const hasSynced =
+      typeof localStorage !== "undefined" &&
+      localStorage.getItem(flagKey) === "1";
+
     try {
       const remote = await apiGet<T>(collection);
-      if (remote.length === 0 && local.length > 0) {
-        // D1 vide + cache local avec des données → seed depuis le local.
+
+      if (!hasSynced && remote.length === 0 && local.length > 0) {
+        // Migration one-shot : ce navigateur n'a jamais sync et a des
+        // données locales à faire remonter.
         try {
           await apiPut(collection, local);
         } catch (err) {
           console.warn(`Migration D1 échouée (${collection})`, err);
         }
+        try {
+          localStorage.setItem(flagKey, "1");
+        } catch {
+          /* stockage indispo — on tolère, on réessaiera au prochain chargement */
+        }
         return local;
+      }
+
+      // Sync ordinaire : D1 fait autorité, le cache local est réaligné.
+      try {
+        localStorage.setItem(flagKey, "1");
+      } catch {
+        /* idem */
       }
       writeLocal(collection, remote);
       return remote;
