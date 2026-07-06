@@ -145,29 +145,41 @@ export const LEAD_STATUS_META: Record<
 };
 
 /* ------------------------------------------------------------------ */
-/* Notes (SAV / Démarchage)                                            */
+/* Notes & cahiers                                                     */
 /* ------------------------------------------------------------------ */
 
-/** Catégorie d'une note — reste fixée à SAV/Démarchage, indépendante
- *  des activités personnalisables du chrono. */
-export type NoteCategory = "sav" | "demarchage";
+/**
+ * Un cahier de notes : un espace nommé regroupant des notes du même thème.
+ * Créé librement par l'utilisateur (ex. « SAV », « Démarchage »,
+ * « Réunions », « Idées », etc.). Isolé par profil client.
+ */
+export interface Notebook {
+  id: string;
+  name: string;
+  createdAt: number;
+  updatedAt: number;
+}
 
-/** Libellés/couleurs des deux catégories de notes. */
-export const NOTE_CATEGORY_META: Record<
-  NoteCategory,
-  { label: string; color: string }
-> = {
-  sav: { label: "SAV", color: "hsl(195 22% 30%)" },
-  demarchage: { label: "Démarchage", color: "hsl(182 66% 37%)" },
-};
+/** Ids stables des deux cahiers seedés par défaut pour un nouveau profil,
+ *  et correspondant à la valeur historique du champ `category` des notes
+ *  Maddyness pré-existantes. */
+export const DEFAULT_NOTEBOOK_IDS = {
+  sav: "sav",
+  demarchage: "demarchage",
+} as const;
 
 /**
- * Une note libre : un titre + un contenu riche (HTML simple, gras/souligné).
- * Rangée par catégorie dans deux onglets distincts.
+ * Une note libre : titre + contenu riche (HTML simple, gras/souligné/rouge).
+ * Rattachée à un cahier via `category` (id du Notebook).
+ *
+ * Note historique : le champ s'appelle `category` par compatibilité avec
+ * les données existantes en D1 (colonne SQL portant ce nom). Sémantiquement
+ * il s'agit désormais d'un `Notebook.id`.
  */
 export interface Note {
   id: string;
-  category: NoteCategory;
+  /** ID du cahier de rattachement (== ancien Notebook.id, ex. "sav"). */
+  category: string;
   title: string;
   /** Contenu HTML restreint (gras, souligné, sauts de ligne). */
   contentHtml: string;

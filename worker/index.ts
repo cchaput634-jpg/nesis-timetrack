@@ -26,6 +26,7 @@ const SCOPED_COLLECTIONS = [
   "notes",
   "clients",
   "activities",
+  "notebooks",
 ] as const;
 type ScopedCollection = (typeof SCOPED_COLLECTIONS)[number];
 
@@ -299,6 +300,18 @@ function insertStatement(
         item.createdAt,
         item.updatedAt
       );
+
+    case "notebooks":
+      return env.DB.prepare(
+        `INSERT INTO notebooks (id, profileId, name, createdAt, updatedAt)
+         VALUES (?, ?, ?, ?, ?)`
+      ).bind(
+        item.id,
+        profileId,
+        item.name,
+        item.createdAt,
+        item.updatedAt
+      );
   }
 }
 
@@ -371,6 +384,15 @@ async function ensureSchema(env: Env): Promise<void> {
         profileId TEXT NOT NULL DEFAULT '',
         label TEXT NOT NULL,
         color TEXT NOT NULL,
+        createdAt INTEGER,
+        updatedAt INTEGER
+      )`
+    ),
+    env.DB.prepare(
+      `CREATE TABLE IF NOT EXISTS notebooks (
+        id TEXT PRIMARY KEY,
+        profileId TEXT NOT NULL DEFAULT '',
+        name TEXT NOT NULL,
         createdAt INTEGER,
         updatedAt INTEGER
       )`

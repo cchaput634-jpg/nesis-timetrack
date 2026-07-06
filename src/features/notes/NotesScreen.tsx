@@ -21,22 +21,23 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { NoteCard } from "./NoteCard";
 import { useNotes, type NoteGroup } from "@/hooks/useNotes";
-import { NOTE_CATEGORY_META, type NoteCategory } from "@/types";
 
 interface NotesScreenProps {
-  category: NoteCategory;
+  /** ID du cahier à afficher. */
+  notebookId: string;
+  /** Nom du cahier (affiché dans le compteur et l'état vide). */
+  notebookName: string;
 }
 
 /** Préfixe des id de zones de dépôt de groupes (pour distinguer des ids de notes). */
 const GROUP_DROP_PREFIX = "group:";
 
 /**
- * Écran de notes d'une catégorie (SAV ou Démarchage).
- * Notes pleine largeur regroupées par « Groupe », réordonnables via
- * drag-and-drop (poignée à gauche) **et** flèches ↑↓ (fallback clavier
- * / accessibilité).
+ * Écran de notes d'un cahier. Notes pleine largeur regroupées par
+ * « Groupe », réordonnables via drag-and-drop (poignée à gauche) **et**
+ * flèches ↑↓ (fallback clavier / accessibilité).
  */
-export function NotesScreen({ category }: NotesScreenProps) {
+export function NotesScreen({ notebookId, notebookName }: NotesScreenProps) {
   const {
     groups,
     groupNames,
@@ -46,8 +47,8 @@ export function NotesScreen({ category }: NotesScreenProps) {
     deleteNote,
     moveNote,
     reorderNotes,
-  } = useNotes(category);
-  const label = NOTE_CATEGORY_META[category].label;
+  } = useNotes(notebookId);
+  const label = notebookName;
   // Id de la note tout juste créée → ouverte directement en édition.
   const [newlyCreatedId, setNewlyCreatedId] = useState<string | null>(null);
   const [activeDragId, setActiveDragId] = useState<string | null>(null);

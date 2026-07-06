@@ -4,6 +4,7 @@ import type {
   ClientProfile,
   Company,
   Note,
+  Notebook,
   Session,
 } from "@/types";
 
@@ -36,6 +37,8 @@ export interface StorageAdapter {
   saveClients(profileId: string, clients: ClientInfo[]): Promise<void>;
   getActivities(profileId: string): Promise<Activity[]>;
   saveActivities(profileId: string, activities: Activity[]): Promise<void>;
+  getNotebooks(profileId: string): Promise<Notebook[]>;
+  saveNotebooks(profileId: string, notebooks: Notebook[]): Promise<void>;
 }
 
 /** Collections stockées côté API et LocalStorage. */
@@ -44,7 +47,8 @@ type Collection =
   | "companies"
   | "notes"
   | "clients"
-  | "activities";
+  | "activities"
+  | "notebooks";
 
 /** Ensemble des collections scopées par profil (les profiles ne le sont pas). */
 
@@ -54,6 +58,7 @@ const KEYS: Record<Collection, string> = {
   notes: "tct.notes.v2",
   clients: "tct.clients.v2",
   activities: "tct.activities.v2",
+  notebooks: "tct.notebooks.v1",
 };
 const PROFILES_KEY = "tct.profiles.v1";
 
@@ -248,6 +253,12 @@ class HybridAdapter implements StorageAdapter {
   }
   saveActivities(profileId: string, activities: Activity[]) {
     return this.store("activities", profileId, activities);
+  }
+  getNotebooks(profileId: string) {
+    return this.load<Notebook>("notebooks", profileId);
+  }
+  saveNotebooks(profileId: string, notebooks: Notebook[]) {
+    return this.store("notebooks", profileId, notebooks);
   }
 }
 

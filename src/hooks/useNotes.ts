@@ -2,7 +2,7 @@ import { useCallback, useEffect, useMemo, useState } from "react";
 import { db } from "@/services/storage";
 import { uid } from "@/lib/time";
 import { useProfileContext } from "@/context/ProfileContext";
-import type { Note, NoteCategory } from "@/types";
+import type { Note } from "@/types";
 
 /** Note « normalisée » : groupName et sortOrder toujours définis. */
 interface NormalizedNote extends Note {
@@ -17,10 +17,14 @@ export interface NoteGroup {
 }
 
 /**
- * Gère les notes d'une catégorie donnée (SAV ou Démarchage).
+ * Gère les notes d'un cahier donné (identifié par son `notebookId`).
  * Vue dérivée par groupe avec ordre manuel (flèches ↑↓).
+ *
+ * Le champ `category` d'une Note est resté nommé ainsi côté modèle / D1
+ * pour préserver les données existantes, mais sémantiquement c'est
+ * désormais un `Notebook.id`.
  */
-export function useNotes(category: NoteCategory) {
+export function useNotes(notebookId: string) {
   const { activeProfileId } = useProfileContext();
   const [all, setAll] = useState<Note[]>([]);
   const [loading, setLoading] = useState(true);
@@ -51,14 +55,14 @@ export function useNotes(category: NoteCategory) {
   const notes = useMemo<NormalizedNote[]>(
     () =>
       all
-        .filter((n) => n.category === category)
+        .filter((n) => n.category === notebookId)
         .map((n) => ({
           ...n,
           groupName: n.groupName ?? "",
           sortOrder: n.sortOrder ?? -n.updatedAt,
         }))
         .sort((a, b) => a.sortOrder - b.sortOrder),
-    [all, category]
+    [all, notebookId]
   );
 
   /** Notes regroupées par `groupName`, groupes triés par ordre d'apparition. */
@@ -86,7 +90,7 @@ export function useNotes(category: NoteCategory) {
     );
     const note: Note = {
       id: uid(),
-      category,
+      category: notebookId,
       title: "",
       contentHtml: "",
       groupName: "",
@@ -96,7 +100,7 @@ export function useNotes(category: NoteCategory) {
     };
     persist([note, ...all]);
     return note;
-  }, [all, notes, category, persist]);
+  }, [all, notes, notebookId, persist]);
 
   const updateNote = useCallback(
     (
