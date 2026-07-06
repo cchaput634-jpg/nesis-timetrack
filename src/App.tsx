@@ -15,6 +15,7 @@ import { TimerScreen } from "@/features/timer/TimerScreen";
 import { CrmScreen } from "@/features/crm/CrmScreen";
 import { NotesScreen } from "@/features/notes/NotesScreen";
 import { ClientInfoScreen } from "@/features/clients/ClientInfoScreen";
+import { ProfileSwitcher } from "@/features/profiles/ProfileSwitcher";
 
 type View = "timer" | "crm" | "clients" | "note-sav" | "note-demarchage";
 
@@ -73,6 +74,7 @@ export default function App() {
       {/* Sidebar — fixe sur desktop */}
       <aside className="hidden w-64 shrink-0 flex-col border-r bg-background lg:flex">
         <Brand />
+        <ProfileSwitcher />
         <nav className="flex flex-1 flex-col gap-1 p-3">
           {NAV.map((item) => (
             <NavItem
@@ -117,6 +119,7 @@ export default function App() {
                   <X className="h-5 w-5" />
                 </Button>
               </div>
+              <ProfileSwitcher />
               <nav className="flex flex-1 flex-col gap-1 p-3">
                 {NAV.map((item) => (
                   <NavItem

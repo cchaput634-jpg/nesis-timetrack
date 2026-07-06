@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { db } from "@/services/storage";
 import { uid } from "@/lib/time";
+import { useProfileContext } from "@/context/ProfileContext";
 import type { Note, NoteCategory } from "@/types";
 
 /** Note « normalisée » : groupName et sortOrder toujours définis. */
@@ -20,20 +21,26 @@ export interface NoteGroup {
  * Vue dérivée par groupe avec ordre manuel (flèches ↑↓).
  */
 export function useNotes(category: NoteCategory) {
+  const { activeProfileId } = useProfileContext();
   const [all, setAll] = useState<Note[]>([]);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    db.getNotes().then((data) => {
+    if (!activeProfileId) return;
+    setLoading(true);
+    db.getNotes(activeProfileId).then((data) => {
       setAll(data);
       setLoading(false);
     });
-  }, []);
+  }, [activeProfileId]);
 
-  const persist = useCallback((next: Note[]) => {
-    setAll(next);
-    void db.saveNotes(next);
-  }, []);
+  const persist = useCallback(
+    (next: Note[]) => {
+      setAll(next);
+      if (activeProfileId) void db.saveNotes(activeProfileId, next);
+    },
+    [activeProfileId]
+  );
 
   /**
    * Notes de la catégorie, avec valeurs par défaut pour `groupName` et

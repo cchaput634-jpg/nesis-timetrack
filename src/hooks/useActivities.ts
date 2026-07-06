@@ -1,11 +1,10 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { db } from "@/services/storage";
 import { uid } from "@/lib/time";
+import { useProfileContext } from "@/context/ProfileContext";
 import type { Activity } from "@/types";
 
-/** Deux activités par défaut à la première utilisation (ids stables afin
- *  que les sessions historiques stockant "sav" / "demarchage" restent
- *  correctement rattachées après cette évolution). */
+/** Deux activités par défaut à la première utilisation d'un profil. */
 const DEFAULT_ACTIVITIES: Activity[] = [
   {
     id: "sav",
@@ -26,30 +25,37 @@ const DEFAULT_ACTIVITIES: Activity[] = [
 type ActivityPatch = Partial<Pick<Activity, "label" | "color">>;
 
 /**
- * Gère la liste des activités chronométrées personnalisables.
- * CRUD + persistance D1 + seed automatique à la première utilisation.
+ * Gère les activités du profil actif.
+ * Recharge quand le profil change ; seed les deux activités par défaut si
+ * le profil est vierge.
  */
 export function useActivities() {
+  const { activeProfileId } = useProfileContext();
   const [activities, setActivities] = useState<Activity[]>([]);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    db.getActivities().then((data) => {
+    if (!activeProfileId) return;
+    setLoading(true);
+    db.getActivities(activeProfileId).then((data) => {
       if (data.length === 0) {
-        // Première utilisation : on installe les deux activités historiques.
+        // Nouveau profil vierge : on installe les deux activités par défaut.
         setActivities(DEFAULT_ACTIVITIES);
-        void db.saveActivities(DEFAULT_ACTIVITIES);
+        void db.saveActivities(activeProfileId, DEFAULT_ACTIVITIES);
       } else {
         setActivities(data);
       }
       setLoading(false);
     });
-  }, []);
+  }, [activeProfileId]);
 
-  const persist = useCallback((next: Activity[]) => {
-    setActivities(next);
-    void db.saveActivities(next);
-  }, []);
+  const persist = useCallback(
+    (next: Activity[]) => {
+      setActivities(next);
+      if (activeProfileId) void db.saveActivities(activeProfileId, next);
+    },
+    [activeProfileId]
+  );
 
   const addActivity = useCallback(
     (label: string, color: string): Activity => {
@@ -82,7 +88,7 @@ export function useActivities() {
     [activities, persist]
   );
 
-  /** Map id -> activité, pratique pour retrouver les libellés/couleurs. */
+  /** Map id -> activité, pour retrouver rapidement les libellés/couleurs. */
   const byId = useMemo(
     () => new Map(activities.map((a) => [a.id, a])),
     [activities]

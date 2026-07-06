@@ -1,30 +1,44 @@
-import type { Activity, ClientInfo, Company, Note, Session } from "@/types";
+import type {
+  Activity,
+  ClientInfo,
+  ClientProfile,
+  Company,
+  Note,
+  Session,
+} from "@/types";
 
 /**
- * Couche d'abstraction de persistance.
+ * Couche d'abstraction de persistance, **scopée par profil client**.
  *
- * Toute l'application passe par cette interface. L'implémentation par défaut
- * (`HybridAdapter`) synchronise avec la base **Cloudflare D1** via l'API du
- * Worker (`/api/*`), tout en conservant un cache LocalStorage : l'app reste
- * donc fonctionnelle même hors-ligne ou si le backend n'est pas démarré.
+ * L'implémentation par défaut (`HybridAdapter`) synchronise avec la base
+ * **Cloudflare D1** via l'API du Worker et conserve un cache LocalStorage.
  *
- * L'interface est asynchrone : brancher un autre backend = écrire une
- * nouvelle classe et changer l'export `db` en bas de fichier.
+ * - Les profils sont GLOBAUX (une seule liste, exposée sans profileId).
+ * - Toutes les autres collections sont ISOLÉES par profil : chaque profil
+ *   a ses activités, sessions, notes, entreprises et interlocuteurs à lui.
  */
 export interface StorageAdapter {
-  getSessions(): Promise<Session[]>;
-  saveSessions(sessions: Session[]): Promise<void>;
-  getCompanies(): Promise<Company[]>;
-  saveCompanies(companies: Company[]): Promise<void>;
-  getNotes(): Promise<Note[]>;
-  saveNotes(notes: Note[]): Promise<void>;
-  getClients(): Promise<ClientInfo[]>;
-  saveClients(clients: ClientInfo[]): Promise<void>;
-  getActivities(): Promise<Activity[]>;
-  saveActivities(activities: Activity[]): Promise<void>;
+  /* --- Profils (non scopés) --- */
+  getProfiles(): Promise<ClientProfile[]>;
+  saveProfiles(profiles: ClientProfile[]): Promise<void>;
+  /** Rattache toutes les lignes orphelines D1 (profileId='') au profil
+   *  demandé. Idempotent. Utilisé pour migrer les données pré-multi-profils. */
+  adoptOrphans(profileId: string): Promise<void>;
+
+  /* --- Collections scopées par profil --- */
+  getSessions(profileId: string): Promise<Session[]>;
+  saveSessions(profileId: string, sessions: Session[]): Promise<void>;
+  getCompanies(profileId: string): Promise<Company[]>;
+  saveCompanies(profileId: string, companies: Company[]): Promise<void>;
+  getNotes(profileId: string): Promise<Note[]>;
+  saveNotes(profileId: string, notes: Note[]): Promise<void>;
+  getClients(profileId: string): Promise<ClientInfo[]>;
+  saveClients(profileId: string, clients: ClientInfo[]): Promise<void>;
+  getActivities(profileId: string): Promise<Activity[]>;
+  saveActivities(profileId: string, activities: Activity[]): Promise<void>;
 }
 
-/** Collections persistées ; sert de clés d'API et de LocalStorage. */
+/** Collections stockées côté API et LocalStorage. */
 type Collection =
   | "sessions"
   | "companies"
@@ -32,48 +46,69 @@ type Collection =
   | "clients"
   | "activities";
 
+/** Ensemble des collections scopées par profil (les profiles ne le sont pas). */
+
 const KEYS: Record<Collection, string> = {
-  sessions: "tct.sessions.v1",
-  companies: "tct.companies.v1",
-  notes: "tct.notes.v1",
-  clients: "tct.clients.v1",
-  activities: "tct.activities.v1",
+  sessions: "tct.sessions.v2",
+  companies: "tct.companies.v2",
+  notes: "tct.notes.v2",
+  clients: "tct.clients.v2",
+  activities: "tct.activities.v2",
 };
+const PROFILES_KEY = "tct.profiles.v1";
 
 /* ------------------------------------------------------------------ */
 /* Cache local (LocalStorage)                                          */
 /* ------------------------------------------------------------------ */
 
-function readLocal<T>(collection: Collection): T[] {
+/** Clé LocalStorage complète pour une collection scopée. */
+function scopedKey(collection: Collection, profileId: string): string {
+  return `${KEYS[collection]}.${profileId}`;
+}
+
+function readLocal<T>(key: string): T[] {
   try {
-    const raw = localStorage.getItem(KEYS[collection]);
+    const raw = localStorage.getItem(key);
     return raw ? (JSON.parse(raw) as T[]) : [];
   } catch {
     return [];
   }
 }
 
-function writeLocal<T>(collection: Collection, value: T[]): void {
-  localStorage.setItem(KEYS[collection], JSON.stringify(value));
+function writeLocal<T>(key: string, value: T[]): void {
+  try {
+    localStorage.setItem(key, JSON.stringify(value));
+  } catch {
+    /* quota / mode privé — on tolère */
+  }
 }
 
 /* ------------------------------------------------------------------ */
 /* Client API du Worker Cloudflare (D1)                                */
 /* ------------------------------------------------------------------ */
 
-/** Base de l'API : proxy Vite en dev, même origine en prod. */
+/** Base de l'API : proxy Vite en dev, URL Worker en prod. */
 const API_BASE = (import.meta.env.VITE_API_BASE as string | undefined) ?? "/api";
 
-async function apiGet<T>(collection: Collection): Promise<T[]> {
-  const res = await fetch(`${API_BASE}/${collection}`, {
+async function apiGet<T>(
+  collection: Collection | "profiles",
+  profileId?: string
+): Promise<T[]> {
+  const qs = profileId ? `?profile=${encodeURIComponent(profileId)}` : "";
+  const res = await fetch(`${API_BASE}/${collection}${qs}`, {
     headers: { Accept: "application/json" },
   });
   if (!res.ok) throw new Error(`GET ${collection} → ${res.status}`);
   return (await res.json()) as T[];
 }
 
-async function apiPut<T>(collection: Collection, data: T[]): Promise<void> {
-  const res = await fetch(`${API_BASE}/${collection}`, {
+async function apiPut<T>(
+  collection: Collection | "profiles",
+  data: T[],
+  profileId?: string
+): Promise<void> {
+  const qs = profileId ? `?profile=${encodeURIComponent(profileId)}` : "";
+  const res = await fetch(`${API_BASE}/${collection}${qs}`, {
     method: "PUT",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify(data),
@@ -88,108 +123,131 @@ async function apiPut<T>(collection: Collection, data: T[]): Promise<void> {
 /** Marqueur LocalStorage : ce navigateur a-t-il déjà réussi à synchroniser
  *  cette collection avec D1 au moins une fois ? Empêche toute migration
  *  répétée (qui « ressusciterait » les éléments supprimés depuis un autre
- *  appareil). Une valeur par collection car chacune peut arriver
- *  indépendamment à un premier sync réussi. */
-const SYNC_FLAG_PREFIX = "tct.synced.v1.";
+ *  appareil). Un flag par collection ET par profil. */
+const SYNC_FLAG_PREFIX = "tct.synced.v2.";
 
 class HybridAdapter implements StorageAdapter {
-  /**
-   * Lecture : tente D1 ; en cas d'échec (offline, backend arrêté),
-   * retombe sur le cache local. Une lecture D1 réussie rafraîchit le cache.
-   *
-   * **Migration one-shot par appareil** : uniquement au tout premier sync
-   * réussi de ce navigateur, si la base D1 est vide et que le cache local
-   * a des données, on pousse ces données locales vers D1 (rattrapage de
-   * l'ancien mode LocalStorage seul).
-   *
-   * Une fois le flag `tct.synced.v1.<collection>` posé, ce navigateur
-   * considère D1 comme la source de vérité et ne re-uploade JAMAIS son
-   * cache local — sinon supprimer un élément depuis un autre appareil
-   * serait annulé au prochain chargement.
-   */
-  private async load<T>(collection: Collection): Promise<T[]> {
-    const local = readLocal<T>(collection);
-    const flagKey = `${SYNC_FLAG_PREFIX}${collection}`;
-    const hasSynced =
-      typeof localStorage !== "undefined" &&
-      localStorage.getItem(flagKey) === "1";
+  /* ---------------- Profils (non scopés) ---------------- */
 
+  async getProfiles(): Promise<ClientProfile[]> {
+    const local = readLocal<ClientProfile>(PROFILES_KEY);
+    const flagKey = `${SYNC_FLAG_PREFIX}profiles`;
+    const hasSynced = localStorage.getItem(flagKey) === "1";
     try {
-      const remote = await apiGet<T>(collection);
-
+      const remote = await apiGet<ClientProfile>("profiles");
       if (!hasSynced && remote.length === 0 && local.length > 0) {
-        // Migration one-shot : ce navigateur n'a jamais sync et a des
-        // données locales à faire remonter.
         try {
-          await apiPut(collection, local);
+          await apiPut("profiles", local);
         } catch (err) {
-          console.warn(`Migration D1 échouée (${collection})`, err);
+          console.warn("Migration D1 échouée (profiles)", err);
         }
-        try {
-          localStorage.setItem(flagKey, "1");
-        } catch {
-          /* stockage indispo — on tolère, on réessaiera au prochain chargement */
-        }
+        localStorage.setItem(flagKey, "1");
         return local;
       }
-
-      // Sync ordinaire : D1 fait autorité, le cache local est réaligné.
-      try {
-        localStorage.setItem(flagKey, "1");
-      } catch {
-        /* idem */
-      }
-      writeLocal(collection, remote);
+      localStorage.setItem(flagKey, "1");
+      writeLocal(PROFILES_KEY, remote);
       return remote;
     } catch {
       return local;
     }
   }
 
-  /**
-   * Écriture : met à jour le cache local immédiatement (réactivité),
-   * puis pousse vers D1 en best-effort (sans bloquer l'UI).
-   */
-  private async store<T>(collection: Collection, data: T[]): Promise<void> {
-    writeLocal(collection, data);
+  async saveProfiles(profiles: ClientProfile[]): Promise<void> {
+    writeLocal(PROFILES_KEY, profiles);
     try {
-      await apiPut(collection, data);
+      await apiPut("profiles", profiles);
     } catch (err) {
-      // Backend indisponible : la donnée reste en cache local et sera
-      // resynchronisée à la prochaine écriture réussie.
+      console.warn("Sync D1 différée (profiles)", err);
+    }
+  }
+
+  async adoptOrphans(profileId: string): Promise<void> {
+    const res = await fetch(
+      `${API_BASE}/adopt-orphans?profile=${encodeURIComponent(profileId)}`,
+      { method: "POST" }
+    );
+    if (!res.ok) {
+      throw new Error(`adopt-orphans → ${res.status}`);
+    }
+  }
+
+  /* ---------------- Collections scopées par profil ---------------- */
+
+  /**
+   * Lecture : tente D1 pour ce profil ; en cas d'échec, retombe sur le
+   * cache local (aussi scopé). Migration one-shot par (collection, profil).
+   */
+  private async load<T>(
+    collection: Collection,
+    profileId: string
+  ): Promise<T[]> {
+    const key = scopedKey(collection, profileId);
+    const local = readLocal<T>(key);
+    const flagKey = `${SYNC_FLAG_PREFIX}${collection}.${profileId}`;
+    const hasSynced = localStorage.getItem(flagKey) === "1";
+
+    try {
+      const remote = await apiGet<T>(collection, profileId);
+      if (!hasSynced && remote.length === 0 && local.length > 0) {
+        try {
+          await apiPut(collection, local, profileId);
+        } catch (err) {
+          console.warn(`Migration D1 échouée (${collection})`, err);
+        }
+        localStorage.setItem(flagKey, "1");
+        return local;
+      }
+      localStorage.setItem(flagKey, "1");
+      writeLocal(key, remote);
+      return remote;
+    } catch {
+      return local;
+    }
+  }
+
+  /** Écriture : cache local immédiat + push D1 en best-effort. */
+  private async store<T>(
+    collection: Collection,
+    profileId: string,
+    data: T[]
+  ): Promise<void> {
+    writeLocal(scopedKey(collection, profileId), data);
+    try {
+      await apiPut(collection, data, profileId);
+    } catch (err) {
       console.warn(`Sync D1 différée (${collection})`, err);
     }
   }
 
-  getSessions() {
-    return this.load<Session>("sessions");
+  getSessions(profileId: string) {
+    return this.load<Session>("sessions", profileId);
   }
-  saveSessions(sessions: Session[]) {
-    return this.store("sessions", sessions);
+  saveSessions(profileId: string, sessions: Session[]) {
+    return this.store("sessions", profileId, sessions);
   }
-  getCompanies() {
-    return this.load<Company>("companies");
+  getCompanies(profileId: string) {
+    return this.load<Company>("companies", profileId);
   }
-  saveCompanies(companies: Company[]) {
-    return this.store("companies", companies);
+  saveCompanies(profileId: string, companies: Company[]) {
+    return this.store("companies", profileId, companies);
   }
-  getNotes() {
-    return this.load<Note>("notes");
+  getNotes(profileId: string) {
+    return this.load<Note>("notes", profileId);
   }
-  saveNotes(notes: Note[]) {
-    return this.store("notes", notes);
+  saveNotes(profileId: string, notes: Note[]) {
+    return this.store("notes", profileId, notes);
   }
-  getClients() {
-    return this.load<ClientInfo>("clients");
+  getClients(profileId: string) {
+    return this.load<ClientInfo>("clients", profileId);
   }
-  saveClients(clients: ClientInfo[]) {
-    return this.store("clients", clients);
+  saveClients(profileId: string, clients: ClientInfo[]) {
+    return this.store("clients", profileId, clients);
   }
-  getActivities() {
-    return this.load<Activity>("activities");
+  getActivities(profileId: string) {
+    return this.load<Activity>("activities", profileId);
   }
-  saveActivities(activities: Activity[]) {
-    return this.store("activities", activities);
+  saveActivities(profileId: string, activities: Activity[]) {
+    return this.store("activities", profileId, activities);
   }
 }
 

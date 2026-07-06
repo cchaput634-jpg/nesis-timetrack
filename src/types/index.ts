@@ -1,7 +1,24 @@
 /**
  * Modèle de données de l'application.
- * Deux domaines distincts : le suivi de temps (Session) et le CRM (Company/Contact).
+ *
+ * Toutes les données métier (activités, sessions, notes, entreprises,
+ * interlocuteurs) sont **scopées par profil client** : chaque profil a
+ * son propre espace 100 % isolé.
  */
+
+/* ------------------------------------------------------------------ */
+/* Profils clients                                                     */
+/* ------------------------------------------------------------------ */
+
+/** Un profil client : cloisonne toutes les données de l'app. */
+export interface ClientProfile {
+  id: string;
+  name: string;
+  /** Couleur d'identification dans le sélecteur (optionnel, une du palette). */
+  color: string;
+  createdAt: number;
+  updatedAt: number;
+}
 
 /* ------------------------------------------------------------------ */
 /* Suivi de temps                                                      */

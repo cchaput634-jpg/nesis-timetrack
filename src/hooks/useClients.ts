@@ -1,28 +1,35 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { db } from "@/services/storage";
 import { uid } from "@/lib/time";
+import { useProfileContext } from "@/context/ProfileContext";
 import type { ClientInfo } from "@/types";
 
 type ClientPatch = Partial<
   Pick<ClientInfo, "firstName" | "lastName" | "role" | "phone" | "email" | "notes">
 >;
 
-/** Gère les fiches « Info client » : CRUD + persistance (D1 + cache local). */
+/** Gère les fiches interlocuteurs du profil actif. */
 export function useClients() {
+  const { activeProfileId } = useProfileContext();
   const [clients, setClients] = useState<ClientInfo[]>([]);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    db.getClients().then((data) => {
+    if (!activeProfileId) return;
+    setLoading(true);
+    db.getClients(activeProfileId).then((data) => {
       setClients(data);
       setLoading(false);
     });
-  }, []);
+  }, [activeProfileId]);
 
-  const persist = useCallback((next: ClientInfo[]) => {
-    setClients(next);
-    void db.saveClients(next);
-  }, []);
+  const persist = useCallback(
+    (next: ClientInfo[]) => {
+      setClients(next);
+      if (activeProfileId) void db.saveClients(activeProfileId, next);
+    },
+    [activeProfileId]
+  );
 
   const addClient = useCallback((): ClientInfo => {
     const now = Date.now();

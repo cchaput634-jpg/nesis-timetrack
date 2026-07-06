@@ -1,29 +1,34 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { db } from "@/services/storage";
 import { groupSessionsByWeek, uid } from "@/lib/time";
+import { useProfileContext } from "@/context/ProfileContext";
 import type { Session } from "@/types";
 
 /**
- * Gère l'historique des sessions chronométrées.
- * Charge depuis la couche de persistance et expose des actions CRUD,
- * plus la vue dérivée regroupée par semaine.
+ * Gère l'historique des sessions chronométrées du profil actif.
+ * Recharge automatiquement lorsque le profil change.
  */
 export function useSessions() {
+  const { activeProfileId } = useProfileContext();
   const [sessions, setSessions] = useState<Session[]>([]);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    db.getSessions().then((data) => {
+    if (!activeProfileId) return;
+    setLoading(true);
+    db.getSessions(activeProfileId).then((data) => {
       setSessions(data);
       setLoading(false);
     });
-  }, []);
+  }, [activeProfileId]);
 
-  // Toute mutation persiste immédiatement puis met à jour l'état local.
-  const persist = useCallback((next: Session[]) => {
-    setSessions(next);
-    void db.saveSessions(next);
-  }, []);
+  const persist = useCallback(
+    (next: Session[]) => {
+      setSessions(next);
+      if (activeProfileId) void db.saveSessions(activeProfileId, next);
+    },
+    [activeProfileId]
+  );
 
   const addSession = useCallback(
     (activity: string, startedAt: number, durationSec: number) => {

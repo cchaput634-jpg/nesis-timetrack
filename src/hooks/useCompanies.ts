@@ -1,30 +1,37 @@
 import { useCallback, useEffect, useState } from "react";
 import { db } from "@/services/storage";
 import { uid } from "@/lib/time";
+import { useProfileContext } from "@/context/ProfileContext";
 import type { Company, Contact } from "@/types";
 
 type CompanyDraft = Omit<Company, "id" | "contacts" | "createdAt">;
 type ContactDraft = Omit<Contact, "id">;
 
 /**
- * Gère le CRM de démarchage : entreprises et leurs contacts.
- * CRUD complet, persistance automatique via la couche `db`.
+ * Gère le CRM de démarchage du profil actif : entreprises et contacts.
+ * Recharge quand le profil change.
  */
 export function useCompanies() {
+  const { activeProfileId } = useProfileContext();
   const [companies, setCompanies] = useState<Company[]>([]);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    db.getCompanies().then((data) => {
+    if (!activeProfileId) return;
+    setLoading(true);
+    db.getCompanies(activeProfileId).then((data) => {
       setCompanies(data);
       setLoading(false);
     });
-  }, []);
+  }, [activeProfileId]);
 
-  const persist = useCallback((next: Company[]) => {
-    setCompanies(next);
-    void db.saveCompanies(next);
-  }, []);
+  const persist = useCallback(
+    (next: Company[]) => {
+      setCompanies(next);
+      if (activeProfileId) void db.saveCompanies(activeProfileId, next);
+    },
+    [activeProfileId]
+  );
 
   /* ---- Entreprises ---- */
 
