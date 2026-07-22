@@ -80,4 +80,28 @@
     white-space: pre-wrap;
     word-break: break-word;
   }
+
+  /* Cases à cocher insérées via la barre d'outils des notes. */
+  .prose-editor .tct-task,
+  .note-content .tct-task {
+    display: flex;
+    align-items: flex-start;
+    gap: 0.5rem;
+    padding: 0.15rem 0;
+  }
+  .prose-editor .tct-task input[type="checkbox"],
+  .note-content .tct-task input[type="checkbox"] {
+    margin-top: 0.3rem;
+    width: 1rem;
+    height: 1rem;
+    accent-color: hsl(var(--primary));
+    cursor: pointer;
+    flex-shrink: 0;
+  }
+  /* Case cochée : texte grisé et rayé, comme une to-do faite. */
+  .prose-editor .tct-task:has(input[checked]),
+  .note-content .tct-task:has(input[checked]) {
+    color: hsl(var(--muted-foreground));
+    text-decoration: line-through;
+  }
 }

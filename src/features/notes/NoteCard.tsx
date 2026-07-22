@@ -11,6 +11,7 @@ import {
 } from "lucide-react";
 import { useSortable } from "@dnd-kit/sortable";
 import { CSS } from "@dnd-kit/utilities";
+import { toggleTaskCheckbox } from "@/lib/tasks";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -230,6 +231,14 @@ export function NoteCard({
       ) : note.contentHtml.replace(/<[^>]*>/g, "").trim() ? (
         <div
           className="note-content min-h-[80px] text-sm leading-relaxed"
+          onClick={(e) => {
+            // Permet de cocher/décocher des tâches directement en mode
+            // lecture, sans avoir à passer en édition. On persiste
+            // immédiatement le HTML mis à jour.
+            if (!toggleTaskCheckbox(e.target)) return;
+            const html = (e.currentTarget as HTMLDivElement).innerHTML;
+            onUpdate(note.id, { contentHtml: html });
+          }}
           dangerouslySetInnerHTML={{ __html: note.contentHtml }}
         />
       ) : (

@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useRef, useState } from "react";
-import { Bold, Underline, Baseline } from "lucide-react";
+import { Bold, Underline, Baseline, CheckSquare } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { toggleTaskCheckbox, TASK_ITEM_TEMPLATE } from "@/lib/tasks";
 
 /** Rouge appliqué au texte (rouge-600). */
 const RED = "#dc2626";
@@ -99,6 +100,25 @@ export function RichTextEditor({
     emit();
   }, [active.red, refreshActive, emit]);
 
+  /** Insère une case à cocher à la position du curseur. */
+  const insertCheckbox = useCallback(() => {
+    ref.current?.focus();
+    document.execCommand("insertHTML", false, TASK_ITEM_TEMPLATE);
+    emit();
+  }, [emit]);
+
+  /** Clic dans la zone d'édition : intercepte les cases à cocher pour
+   *  basculer leur état ; sinon, laisse le curseur se placer normalement. */
+  const handleEditorClick = useCallback(
+    (e: React.MouseEvent<HTMLDivElement>) => {
+      if (toggleTaskCheckbox(e.target)) {
+        e.preventDefault();
+        emit();
+      }
+    },
+    [emit]
+  );
+
   return (
     <div className="rounded-lg border bg-background">
       {/* Barre d'outils */}
@@ -120,6 +140,13 @@ export function RichTextEditor({
         <ToolbarButton label="Rouge" active={active.red} onClick={toggleRed}>
           <Baseline className="h-4 w-4" style={{ color: RED }} />
         </ToolbarButton>
+        <ToolbarButton
+          label="Case à cocher"
+          active={false}
+          onClick={insertCheckbox}
+        >
+          <CheckSquare className="h-4 w-4" />
+        </ToolbarButton>
       </div>
 
       {/* Zone d'édition */}
@@ -134,6 +161,7 @@ export function RichTextEditor({
         onKeyUp={refreshActive}
         onMouseUp={refreshActive}
         onFocus={refreshActive}
+        onClick={handleEditorClick}
         className={cn(
           "min-h-[340px] w-full px-4 py-3 text-sm leading-relaxed outline-none",
           "prose-editor"
